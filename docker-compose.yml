@@ -1,0 +1,9 @@
+services:
+  resendpit:
+    build: .
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      # - RESENDPIT_MAX_EMAILS=100  # Optional: default is 50

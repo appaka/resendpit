@@ -1,0 +1,26 @@
+# Example: How to use Resend-Pit with your application
+#
+# In your app, set the environment variable:
+#   RESEND_BASE_URL=http://resendpit:3000
+#
+# This redirects all Resend SDK calls to the local interceptor.
+
+services:
+  # Your application
+  myapp:
+    build: ./my-app
+    environment:
+      - RESEND_BASE_URL=http://resendpit:3000
+      - RESEND_API_KEY=re_123456789  # Can be any value, it's ignored
+    depends_on:
+      - resendpit
+
+  # Email interceptor
+  resendpit:
+    image: appaka/resendpit
+    # Or build locally:
+    # build: ./resendpit
+    ports:
+      - "3000:3000"
+    environment:
+      - RESENDPIT_MAX_EMAILS=100  # Optional: default is 50
