@@ -70,3 +70,43 @@ export function formatRelativeTime(dateString: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   return date.toLocaleDateString();
 }
+
+// Gmail size limit (102 KB)
+export const GMAIL_SIZE_LIMIT = 102 * 1024;
+
+export interface HtmlSizeInfo {
+  bytes: number;
+  formatted: string;
+  exceedsGmail: boolean;
+}
+
+export function getHtmlSizeInfo(html: string): HtmlSizeInfo {
+  const bytes = new Blob([html]).size;
+  const formatted = bytes < 1024
+    ? `${bytes} B`
+    : `${(bytes / 1024).toFixed(1)} KB`;
+
+  return {
+    bytes,
+    formatted,
+    exceedsGmail: bytes > GMAIL_SIZE_LIMIT,
+  };
+}
+
+export interface ExtractedLink {
+  href: string;
+  text: string;
+  isExternal: boolean;
+}
+
+export function extractLinks(html: string): ExtractedLink[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const anchors = doc.querySelectorAll('a[href]');
+
+  return Array.from(anchors).map((a) => ({
+    href: a.getAttribute('href') || '',
+    text: a.textContent?.trim() || a.getAttribute('href') || '',
+    isExternal: a.getAttribute('href')?.startsWith('http') || false,
+  }));
+}
