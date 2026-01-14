@@ -82,6 +82,37 @@ export default function App() {
           <EmailPreview email={selectedEmail} />
         </main>
       </div>
+      <footer className="border-t border-zinc-800 px-4 py-2 text-center text-xs text-zinc-500">
+        <span>© 2026 </span>
+        <a
+          href="https://javierperez.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-zinc-400 hover:text-zinc-300 transition-colors"
+        >
+          Javier Pérez
+        </a>
+        <span className="mx-2">·</span>
+        <a
+          href="https://github.com/appaka/resendpit"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-zinc-400 hover:text-zinc-300 transition-colors"
+        >
+          GitHub
+        </a>
+        <span className="mx-2">·</span>
+        <a
+          href="https://paypal.me/javierperezcom"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-zinc-400 hover:text-zinc-300 transition-colors"
+        >
+          Donate
+        </a>
+        <span className="mx-2">·</span>
+        <span>made in 🇨🇭 with ❤️</span>
+      </footer>
     </div>
   );
 }
