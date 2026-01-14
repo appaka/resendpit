@@ -8,42 +8,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Tech Stack
 
-- **Framework:** Next.js 16+ with App Router
-- **Language:** TypeScript (strict mode)
-- **Storage:** In-memory global singleton
+- **Backend:** Go (net/http standard library)
+- **Frontend:** React 19 + Vite + Tailwind CSS v4
+- **Storage:** In-memory with mutex
 - **Real-time:** Server-Sent Events (SSE)
-- **Styling:** Tailwind CSS v4
-- **Deployment:** Docker (standalone output)
+- **Deployment:** Docker (multi-stage build, ~15 MB image)
 
 ## Build & Development Commands
 
 ```bash
-# Install dependencies
-pnpm install
+# Development (concurrent frontend + backend)
+make dev
 
-# Development server (default http://localhost:3000)
-pnpm dev
+# Or separately:
+cd frontend && pnpm dev      # Frontend on port 5173 with proxy
+cd backend && go run .       # Backend on port 3000
 
-# Use custom port if 3000 is occupied
-PORT=3001 pnpm dev
+# Build everything
+make build
 
-# Custom email limit (default: 50)
-RESENDPIT_MAX_EMAILS=100 pnpm dev
+# Build frontend only (outputs to backend/static/)
+cd frontend && pnpm build
 
-# Production build
-pnpm build
-
-# Start production server
-pnpm start
-
-# Linting
-pnpm lint
+# Build backend only
+cd backend && go build -o ../dist/resendpit .
 
 # Docker build
-docker build -t appaka/resendpit .
+make docker
 
 # Docker run
 docker run -p 3000:3000 appaka/resendpit
+
+# Test endpoints
+make test
 ```
 
 ## Testing the Interceptor
@@ -69,7 +66,7 @@ curl -X DELETE http://localhost:3000/api/emails
 ```
 ┌─────────────────┐      POST /emails     ┌──────────────────┐
 │   Consumer App  │ ──────────────────────▶│   Resend-Pit     │
-│   (Resend SDK)  │                        │   (Interceptor)   │
+│   (Resend SDK)  │                        │   (Go backend)   │
 └─────────────────┘                        └────────┬─────────┘
                                                     │
                                                     ▼
@@ -77,26 +74,37 @@ curl -X DELETE http://localhost:3000/api/emails
                                           │  In-Memory Store │
                                           │  (50 emails FIFO)│
                                           └────────┬─────────┘
-                                                   │ EventEmitter
+                                                   │ Broadcast
                                                    ▼
 ┌─────────────────┐      SSE /api/events  ┌──────────────────┐
 │   Dashboard UI  │ ◀──────────────────────│   SSE Stream     │
-│   (Browser)     │                        │                  │
+│   (React)       │                        │                  │
 └─────────────────┘                        └──────────────────┘
 ```
 
 ### Key Components
 
+**Backend (Go):**
+
 | Component | Path | Purpose |
 |-----------|------|---------|
-| Types | `src/lib/types.ts` | Email and request interfaces |
-| Utils | `src/lib/utils.ts` | Validation and helper functions |
-| Store | `src/lib/store.ts` | HMR-safe singleton, 50-email FIFO |
-| POST /emails | `src/app/emails/route.ts` | Mimics Resend API |
-| GET /api/emails | `src/app/api/emails/route.ts` | List/clear emails |
-| GET /api/events | `src/app/api/events/route.ts` | SSE stream |
-| GET /api/health | `src/app/api/health/route.ts` | Health check |
-| Dashboard | `src/app/page.tsx` | Two-pane UI |
+| Types | `backend/types/types.go` | Email and request structs |
+| Store | `backend/store/store.go` | Thread-safe singleton, FIFO, SSE broadcast |
+| POST /emails | `backend/handlers/emails.go` | Mimics Resend API |
+| GET/DELETE /api/emails | `backend/handlers/api_emails.go` | List/clear emails |
+| GET /api/events | `backend/handlers/events.go` | SSE stream |
+| GET /api/health | `backend/handlers/health.go` | Health check |
+| Main | `backend/main.go` | HTTP server + static files |
+
+**Frontend (React):**
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| Types | `frontend/src/lib/types.ts` | TypeScript interfaces |
+| Utils | `frontend/src/lib/utils.ts` | Validation and helpers |
+| App | `frontend/src/App.tsx` | Dashboard with SSE |
+| EmailList | `frontend/src/components/EmailList.tsx` | Left panel |
+| EmailPreview | `frontend/src/components/EmailPreview.tsx` | Right panel |
 
 ### SSE Message Types
 
@@ -144,29 +152,40 @@ services:
 
 ```
 resendpit/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── emails/route.ts     # GET/DELETE emails
-│   │   │   ├── events/route.ts     # SSE stream
-│   │   │   └── health/route.ts     # Health check
-│   │   ├── emails/route.ts         # POST /emails (Resend API)
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx                # Dashboard
-│   ├── components/
-│   │   ├── connection-badge.tsx
-│   │   ├── email-item.tsx
-│   │   ├── email-list.tsx
-│   │   ├── email-preview.tsx
-│   │   └── empty-state.tsx
-│   └── lib/
-│       ├── store.ts                # Global store + EventEmitter
-│       ├── types.ts                # TypeScript interfaces
-│       └── utils.ts                # Validation helpers
-├── Dockerfile
+├── backend/
+│   ├── handlers/
+│   │   ├── api_emails.go    # GET/DELETE /api/emails
+│   │   ├── emails.go        # POST /emails (Resend API)
+│   │   ├── events.go        # SSE stream
+│   │   └── health.go        # Health check
+│   ├── store/
+│   │   └── store.go         # Global store + broadcast
+│   ├── types/
+│   │   └── types.go         # Go structs
+│   ├── static/              # Built frontend (generated)
+│   ├── main.go              # HTTP server
+│   ├── go.mod
+│   └── go.sum
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ConnectionBadge.tsx
+│   │   │   ├── EmailItem.tsx
+│   │   │   ├── EmailList.tsx
+│   │   │   ├── EmailPreview.tsx
+│   │   │   └── EmptyState.tsx
+│   │   ├── lib/
+│   │   │   ├── types.ts
+│   │   │   └── utils.ts
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── package.json
+├── Dockerfile               # Multi-stage build
 ├── docker-compose.yml
-├── docker-compose.example.yml
-├── next.config.ts                  # standalone output
-└── package.json
+├── Makefile
+└── README.md
 ```

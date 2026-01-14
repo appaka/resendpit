@@ -1,12 +1,10 @@
-'use client';
-
 import { useEffect, useState, useCallback } from 'react';
-import type { Email, SSEMessage } from '@/lib/types';
-import { ConnectionBadge } from '@/components/connection-badge';
-import { EmailList } from '@/components/email-list';
-import { EmailPreview } from '@/components/email-preview';
+import type { Email, SSEMessage } from './lib/types';
+import { ConnectionBadge } from './components/ConnectionBadge';
+import { EmailList } from './components/EmailList';
+import { EmailPreview } from './components/EmailPreview';
 
-export default function Dashboard() {
+export default function App() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);

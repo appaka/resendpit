@@ -1,9 +1,7 @@
-'use client';
-
 import { useState, useMemo } from 'react';
-import type { Email } from '@/lib/types';
-import { getHtmlSizeInfo, extractLinks } from '@/lib/utils';
-import { EmptyState } from './empty-state';
+import type { Email } from '../lib/types';
+import { getHtmlSizeInfo, extractLinks } from '../lib/utils';
+import { EmptyState } from './EmptyState';
 
 interface EmailPreviewProps {
   email: Email | null;
@@ -201,7 +199,7 @@ export function EmailPreview({ email }: EmailPreviewProps) {
       {/* Gmail warning */}
       {sizeInfo?.exceedsGmail && (
         <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-400">
-          This email exceeds Gmail&apos;s 102 KB limit and may be clipped for recipients.
+          This email exceeds Gmail's 102 KB limit and may be clipped for recipients.
         </div>
       )}
 

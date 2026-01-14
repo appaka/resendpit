@@ -1,8 +1,6 @@
-'use client';
-
-import type { Email } from '@/lib/types';
-import { EmailItem } from './email-item';
-import { EmptyState } from './empty-state';
+import type { Email } from '../lib/types';
+import { EmailItem } from './EmailItem';
+import { EmptyState } from './EmptyState';
 
 interface EmailListProps {
   emails: Email[];

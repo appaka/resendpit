@@ -1,5 +1,5 @@
-import type { Email } from '@/lib/types';
-import { formatRelativeTime } from '@/lib/utils';
+import type { Email } from '../lib/types';
+import { formatRelativeTime } from '../lib/utils';
 
 interface EmailItemProps {
   email: Email;

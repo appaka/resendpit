@@ -19,7 +19,7 @@ services:
   resendpit:
     image: appaka/resendpit
     # Or build locally:
-    # build: ./resendpit
+    # build: .
     ports:
       - "3000:3000"
     environment:

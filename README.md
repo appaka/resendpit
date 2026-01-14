@@ -9,7 +9,8 @@ A local email interceptor for the [Resend](https://resend.com) SDK. Capture and 
 - **Full Resend API compatibility** - Works with any Resend SDK
 - **React Email support** - Renders HTML emails beautifully
 - **Zero configuration** - Works out of the box
-- **Docker ready** - Single container deployment
+- **Docker ready** - Single container deployment (~15 MB image)
+- **Minimal footprint** - ~5-10 MB RAM usage
 
 ## Screenshots
 
@@ -52,8 +53,19 @@ docker run -p 3000:3000 appaka/resendpit
 ```bash
 git clone https://github.com/appaka/resendpit.git
 cd resendpit
-pnpm install
-pnpm dev
+
+# Build frontend
+cd frontend && pnpm install && pnpm build && cd ..
+
+# Run backend
+cd backend && go run .
+```
+
+Or use the Makefile:
+
+```bash
+make build
+make dev
 ```
 
 Then open http://localhost:3000 to view the dashboard.
@@ -176,7 +188,7 @@ curl http://localhost:3000/api/health
   "status": "ok",
   "emails": 5,
   "maxEmails": 50,
-  "timestamp": "2024-01-15T10:30:00.000Z"
+  "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
 
@@ -204,12 +216,30 @@ Server-Sent Events stream for real-time updates.
 | `tags` | array | Email tags `[{name, value}]` |
 | `attachments` | array | Attachment metadata |
 
+## Architecture
+
+```
+resendpit/
+├── backend/              # Go backend (net/http)
+│   ├── main.go           # HTTP server + static files
+│   ├── handlers/         # API handlers
+│   ├── store/            # In-memory store
+│   └── types/            # Go structs
+├── frontend/             # React frontend (Vite)
+│   ├── src/
+│   │   ├── App.tsx       # Dashboard
+│   │   └── components/   # UI components
+│   └── package.json
+├── Dockerfile            # Multi-stage build
+└── Makefile              # Build commands
+```
+
 ## How It Works
 
 ```
 ┌─────────────────┐     POST /emails      ┌──────────────────┐
 │   Your App      │ ────────────────────► │   Resend-Pit     │
-│  (Resend SDK)   │                       │                  │
+│  (Resend SDK)   │                       │   (Go backend)   │
 └─────────────────┘                       └────────┬─────────┘
                                                    │
                                                    ▼
@@ -221,7 +251,7 @@ Server-Sent Events stream for real-time updates.
                                                   ▼
 ┌─────────────────┐     Real-time         ┌──────────────────┐
 │    Dashboard    │ ◄──────────────────── │   SSE Stream     │
-│    (Browser)    │                       │                  │
+│    (React)      │                       │                  │
 └─────────────────┘                       └──────────────────┘
 ```
 
@@ -252,13 +282,15 @@ MIT
 Contributions are welcome! Please open an issue or submit a pull request.
 
 ```bash
-# Development
-pnpm install
-pnpm dev
+# Development (concurrent frontend + backend)
+make dev
 
-# Build
-pnpm build
+# Build frontend and backend
+make build
 
 # Docker build
-docker build -t appaka/resendpit .
+make docker
+
+# Test endpoints
+make test
 ```

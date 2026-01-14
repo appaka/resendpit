@@ -1,9 +1,11 @@
 services:
   resendpit:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.new
     ports:
       - "3000:3000"
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      # - RESENDPIT_MAX_EMAILS=100  # Optional: default is 50
+      # - RESENDPIT_MAX_EMAILS=100
+      - PORT=3000

@@ -1,43 +1,26 @@
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
-WORKDIR /app
-
+# Stage 1: Build Frontend
+FROM node:20-alpine AS frontend
+WORKDIR /app/frontend
 RUN corepack enable pnpm
-
-COPY package.json pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
-
-# Stage 2: Build
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-RUN corepack enable pnpm
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
+COPY frontend/ ./
 RUN pnpm build
 
-# Stage 3: Production
-FROM node:20-alpine AS runner
+# Stage 2: Build Backend
+FROM golang:1.23-alpine AS backend
 WORKDIR /app
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+COPY backend/ ./
+COPY --from=frontend /app/backend/static ./static
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o resendpit .
 
-ENV NODE_ENV=production
-ENV HOSTNAME=0.0.0.0
-ENV PORT=3000
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
+# Stage 3: Final (minimal alpine)
+FROM alpine:3.20
+RUN apk --no-cache add ca-certificates
+COPY --from=backend /app/resendpit /resendpit
 EXPOSE 3000
-
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -q --spider http://localhost:3000/api/health || exit 1
-
-CMD ["node", "server.js"]
+ENTRYPOINT ["/resendpit"]
