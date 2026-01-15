@@ -39,9 +39,28 @@ make docker
 # Docker run
 docker run -p 3000:3000 appaka/resendpit
 
-# Test endpoints
+# Run API tests (requires server running)
 make test
 ```
+
+## Testing
+
+Run the API test suite with:
+
+```bash
+# Run tests against localhost:3000 (default)
+./test_api.sh
+
+# Run tests against a different URL
+./test_api.sh http://localhost:3001
+```
+
+The test script (`test_api.sh`) covers:
+- Health check endpoint
+- POST /emails validation (required fields, invalid JSON)
+- Email creation (simple, array to, cc/bcc, tags/headers)
+- GET/DELETE /api/emails
+- HTTP method restrictions (405 responses)
 
 ## Testing the Interceptor
 

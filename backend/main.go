@@ -15,6 +15,15 @@ import (
 var staticFiles embed.FS
 
 func main() {
+	// Healthcheck mode for Docker HEALTHCHECK
+	if len(os.Args) > 1 && os.Args[1] == "--healthcheck" {
+		resp, err := http.Get("http://localhost:3000/api/health")
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	mux := http.NewServeMux()
 
 	// API routes
