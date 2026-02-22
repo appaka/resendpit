@@ -1,15 +1,16 @@
 # Resend-Pit
 
-A local email interceptor for the [Resend](https://resend.com) SDK. Capture and preview emails during development without sending them to real recipients.
+A local email interceptor for the [Resend](https://resend.com) and [Amazon SES](https://aws.amazon.com/ses/) SDKs. Capture and preview emails during development without sending them to real recipients.
 
 ## Features
 
+- **Multi-provider** - Intercepts both Resend and Amazon SES emails
 - **Drop-in replacement** - Just set one environment variable
 - **Real-time dashboard** - See emails instantly via Server-Sent Events
-- **Full Resend API compatibility** - Works with any Resend SDK
+- **Full API compatibility** - Works with any Resend SDK or AWS SES SDK
 - **React Email support** - Renders HTML emails beautifully
 - **Zero configuration** - Works out of the box
-- **Docker ready** - Single container deployment (~15 MB image)
+- **Docker ready** - Single container deployment (~7 MB image)
 - **Minimal footprint** - ~5-10 MB RAM usage
 
 ## Screenshots
@@ -48,22 +49,18 @@ Then open http://localhost:3000 to view the dashboard.
 
 ## Integration
 
+### Resend SDK
+
 Point your Resend SDK to Resend-Pit by setting the `RESEND_BASE_URL` environment variable:
 
 ```bash
-# In your application's .env file
 RESEND_BASE_URL=http://localhost:3000
 RESEND_API_KEY=re_anything  # Any value works, it's ignored
 ```
 
-That's it! All emails sent via the Resend SDK will now be captured by Resend-Pit.
-
-### Example with Node.js
-
 ```javascript
 import { Resend } from 'resend';
 
-// SDK automatically uses RESEND_BASE_URL if set
 const resend = new Resend('re_123456789');
 
 await resend.emails.send({
@@ -75,6 +72,56 @@ await resend.emails.send({
 // Email captured by Resend-Pit instead of being sent
 ```
 
+### Amazon SES SDK
+
+Point your AWS SES SDK to Resend-Pit using the endpoint override:
+
+```bash
+AWS_ENDPOINT_URL_SES=http://localhost:3000
+```
+
+Works with any AWS SDK — Node.js, Python (boto3), Go, etc:
+
+```javascript
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
+
+const client = new SESv2Client({
+  endpoint: 'http://localhost:3000',
+  region: 'us-east-1',
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+});
+
+await client.send(new SendEmailCommand({
+  FromEmailAddress: 'you@example.com',
+  Destination: { ToAddresses: ['user@example.com'] },
+  Content: { Simple: {
+    Subject: { Data: 'Hello World' },
+    Body: { Html: { Data: '<h1>Welcome!</h1>' } },
+  }},
+}));
+// Email captured by Resend-Pit instead of being sent
+```
+
+```python
+import boto3
+
+client = boto3.client('ses',
+    endpoint_url='http://localhost:3000',
+    region_name='us-east-1',
+    aws_access_key_id='test',
+    aws_secret_access_key='test',
+)
+
+client.send_email(
+    Source='you@example.com',
+    Destination={'ToAddresses': ['user@example.com']},
+    Message={
+        'Subject': {'Data': 'Hello World'},
+        'Body': {'Html': {'Data': '<h1>Welcome!</h1>'}},
+    },
+)
+```
+
 ### Docker Compose
 
 ```yaml
@@ -82,8 +129,8 @@ services:
   app:
     build: .
     environment:
-      - RESEND_BASE_URL=http://resendpit:3000
-      - RESEND_API_KEY=re_123456789
+      - RESEND_BASE_URL=http://resendpit:3000     # For Resend SDK
+      - AWS_ENDPOINT_URL_SES=http://resendpit:3000 # For AWS SES SDK
     depends_on:
       - resendpit
 
@@ -112,8 +159,6 @@ docker run -p 3000:3000 -e RESENDPIT_MAX_EMAILS=200 appaka/resendpit
 
 ## API Reference
 
-Resend-Pit implements the Resend API endpoints:
-
 ### POST /emails
 
 Create an email (Resend SDK endpoint).
@@ -133,6 +178,40 @@ curl -X POST http://localhost:3000/emails \
 ```json
 { "id": "550e8400-e29b-41d4-a716-446655440000" }
 ```
+
+### POST /v2/email/outbound-emails
+
+Create an email (SES v2 endpoint).
+
+```bash
+curl -X POST http://localhost:3000/v2/email/outbound-emails \
+  -H "Content-Type: application/json" \
+  -d '{
+    "FromEmailAddress": "sender@example.com",
+    "Destination": { "ToAddresses": ["recipient@example.com"] },
+    "Content": { "Simple": {
+      "Subject": { "Data": "Test Email" },
+      "Body": { "Html": { "Data": "<h1>Hello</h1>" } }
+    }}
+  }'
+```
+
+**Response:**
+```json
+{ "MessageId": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+### POST / (SES v1)
+
+Create an email (SES v1 form-encoded endpoint).
+
+```bash
+curl -X POST http://localhost:3000/ \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'Action=SendEmail&Source=sender@example.com&Destination.ToAddresses.member.1=recipient@example.com&Message.Subject.Data=Test&Message.Body.Html.Data=%3Ch1%3EHello%3C%2Fh1%3E'
+```
+
+**Response:** XML with `<SendEmailResponse>` containing `<MessageId>`.
 
 ### GET /api/emails
 
@@ -215,7 +294,7 @@ resendpit/
 ```
 ┌─────────────────┐     POST /emails      ┌──────────────────┐
 │   Your App      │ ────────────────────► │   Resend-Pit     │
-│  (Resend SDK)   │                       │   (Go backend)   │
+│ (Resend or SES) │                       │   (Go backend)   │
 └─────────────────┘                       └────────┬─────────┘
                                                    │
                                                    ▼
@@ -231,8 +310,8 @@ resendpit/
 └─────────────────┘                       └──────────────────┘
 ```
 
-1. Your app sends emails via Resend SDK
-2. SDK calls `RESEND_BASE_URL/emails` instead of Resend's API
+1. Your app sends emails via Resend SDK or AWS SES SDK
+2. SDK calls Resend-Pit instead of the real API
 3. Resend-Pit stores the email and returns a fake ID
 4. Dashboard receives real-time updates via SSE
 
@@ -247,7 +326,7 @@ resendpit/
 - [Mailpit](https://github.com/axllent/mailpit) - SMTP-based email testing
 - [Mailtrap](https://mailtrap.io) - Cloud-based email testing
 
-Resend-Pit is specifically designed for the Resend SDK and doesn't require SMTP configuration.
+Resend-Pit intercepts API calls from Resend and SES SDKs directly — no SMTP configuration needed.
 
 ## License
 
