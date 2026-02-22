@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-22
+
+### Added
+
+- Amazon SES v2 email interception (`POST /v2/email/outbound-emails` with JSON body)
+- Amazon SES v1 email interception (`POST /` with `Action=SendEmail` and `Action=SendRawEmail`)
+- Provider badges in dashboard (Resend in blue, SES in amber)
+- "Via" metadata row in email preview showing provider
+- MIME parsing for SES `Content.Raw` and `SendRawEmail` support
+- Multi-provider help text in empty state
+
+### Changed
+
+- Email type now includes `provider` field ("resend" or "ses")
+- Root route handler detects SES v1 form-encoded requests
+
 ## [0.3.0] - 2026-01-15
 
 ### Changed
