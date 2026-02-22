@@ -17,11 +17,16 @@ export function EmptyState({ type }: { type: 'no-emails' | 'no-selection' }) {
         </svg>
         <h3 className="mb-2 text-lg font-medium text-zinc-400">No emails yet</h3>
         <p className="max-w-xs text-center text-sm text-zinc-500">
-          Send an email using the Resend SDK with RESEND_BASE_URL pointing here
+          Send an email using the Resend SDK or AWS SES SDK with the endpoint pointing here
         </p>
-        <code className="mt-4 rounded bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-400">
-          curl -X POST http://localhost:3000/emails ...
-        </code>
+        <div className="mt-4 space-y-2 text-center">
+          <code className="block rounded bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-400">
+            RESEND_BASE_URL=http://localhost:3000
+          </code>
+          <code className="block rounded bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-400">
+            AWS_ENDPOINT_URL_SES=http://localhost:3000
+          </code>
+        </div>
       </div>
     );
   }

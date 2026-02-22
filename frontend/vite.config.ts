@@ -12,6 +12,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000',
       '/emails': 'http://localhost:3000',
+      '/v2': 'http://localhost:3000',
     },
   },
 })

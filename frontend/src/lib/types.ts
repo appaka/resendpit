@@ -1,5 +1,6 @@
 export interface Email {
   id: string;
+  provider: string;
   from: string;
   to: string[];
   cc?: string[];

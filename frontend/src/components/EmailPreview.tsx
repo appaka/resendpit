@@ -55,6 +55,18 @@ export function EmailPreview({ email }: EmailPreviewProps) {
         <h1 className="mb-3 text-xl font-semibold text-zinc-100">{email.subject}</h1>
         <div className="space-y-1 text-sm">
           <div className="flex gap-2">
+            <span className="w-12 text-zinc-500">Via:</span>
+            <span
+              className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${
+                email.provider === 'ses'
+                  ? 'bg-amber-500/20 text-amber-400'
+                  : 'bg-blue-500/20 text-blue-400'
+              }`}
+            >
+              {email.provider === 'ses' ? 'Amazon SES' : 'Resend'}
+            </span>
+          </div>
+          <div className="flex gap-2">
             <span className="w-12 text-zinc-500">From:</span>
             <span className="text-zinc-300">{email.from}</span>
           </div>

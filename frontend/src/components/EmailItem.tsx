@@ -20,7 +20,18 @@ export function EmailItem({ email, selected, onClick }: EmailItemProps) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="truncate text-sm font-medium text-zinc-200">{fromName}</span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-zinc-200">{fromName}</span>
+          <span
+            className={`shrink-0 rounded px-1 py-0.5 text-[10px] font-medium leading-none ${
+              email.provider === 'ses'
+                ? 'bg-amber-500/20 text-amber-400'
+                : 'bg-blue-500/20 text-blue-400'
+            }`}
+          >
+            {email.provider === 'ses' ? 'SES' : 'Resend'}
+          </span>
+        </div>
         <span className="shrink-0 text-xs text-zinc-500">
           {formatRelativeTime(email.createdAt)}
         </span>

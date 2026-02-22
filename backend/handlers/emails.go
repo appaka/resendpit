@@ -59,6 +59,7 @@ func PostEmails(w http.ResponseWriter, r *http.Request) {
 	// Create email
 	email := types.Email{
 		ID:        uuid.NewString(),
+		Provider:  "resend",
 		From:      req.From,
 		To:        to,
 		CC:        normalizeToArray(req.CC),

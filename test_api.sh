@@ -96,6 +96,63 @@ RESP=$(curl -s -w "%{http_code}" -X GET "$BASE_URL/emails" -o /dev/null)
 RESP=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/api/health" -o /dev/null)
 [[ "$RESP" == "405" ]] && pass "POST /api/health returns 405" || fail "POST /api/health should return 405"
 
+# 7. SES v2 API
+echo ""
+echo "--- SES v2 API ---"
+
+# Clear first
+curl -s -X DELETE "$BASE_URL/api/emails" > /dev/null
+
+# Simple SES v2 email
+RESP=$(curl -s -X POST "$BASE_URL/v2/email/outbound-emails" -H "Content-Type: application/json" \
+  -d '{"FromEmailAddress":"ses@test.com","Destination":{"ToAddresses":["user@test.com"]},"Content":{"Simple":{"Subject":{"Data":"SES Test"},"Body":{"Html":{"Data":"<h1>Hello from SES</h1>"}}}}}')
+echo "$RESP" | grep -q '"MessageId"' && pass "SES v2 simple email returns MessageId" || fail "SES v2 simple email failed"
+
+# SES v2 with all fields
+RESP=$(curl -s -X POST "$BASE_URL/v2/email/outbound-emails" -H "Content-Type: application/json" \
+  -d '{"FromEmailAddress":"ses@test.com","Destination":{"ToAddresses":["a@test.com","b@test.com"],"CcAddresses":["cc@test.com"],"BccAddresses":["bcc@test.com"]},"ReplyToAddresses":["reply@test.com"],"Content":{"Simple":{"Subject":{"Data":"Full SES"},"Body":{"Html":{"Data":"<h1>HTML</h1>"},"Text":{"Data":"plain text"}}}},"EmailTags":[{"Name":"env","Value":"dev"}]}')
+echo "$RESP" | grep -q '"MessageId"' && pass "SES v2 full email returns MessageId" || fail "SES v2 full email failed"
+
+# SES v2 validation - missing FromEmailAddress
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/v2/email/outbound-emails" -H "Content-Type: application/json" \
+  -d '{"Destination":{"ToAddresses":["user@test.com"]},"Content":{"Simple":{"Subject":{"Data":"Test"},"Body":{"Html":{"Data":"<h1>Hi</h1>"}}}}}')
+echo "$RESP" | grep -q "400" && pass "SES v2 missing FromEmailAddress returns 400" || fail "SES v2 validation failed"
+
+# SES v2 validation - missing Destination
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/v2/email/outbound-emails" -H "Content-Type: application/json" \
+  -d '{"FromEmailAddress":"ses@test.com","Destination":{"ToAddresses":[]},"Content":{"Simple":{"Subject":{"Data":"Test"},"Body":{"Html":{"Data":"<h1>Hi</h1>"}}}}}')
+echo "$RESP" | grep -q "400" && pass "SES v2 empty ToAddresses returns 400" || fail "SES v2 destination validation failed"
+
+# Verify provider field
+EMAILS=$(curl -s "$BASE_URL/api/emails")
+echo "$EMAILS" | grep -q '"provider":"ses"' && pass "SES emails have provider:ses" || fail "SES emails missing provider field"
+
+# 8. SES v1 API
+echo ""
+echo "--- SES v1 API ---"
+
+# Clear first
+curl -s -X DELETE "$BASE_URL/api/emails" > /dev/null
+
+# SES v1 SendEmail
+RESP=$(curl -s -X POST "$BASE_URL/" -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'Action=SendEmail&Source=v1@test.com&Destination.ToAddresses.member.1=user@test.com&Message.Subject.Data=V1+Test&Message.Body.Html.Data=%3Ch1%3EV1%3C%2Fh1%3E')
+echo "$RESP" | grep -q "MessageId" && pass "SES v1 SendEmail returns MessageId" || fail "SES v1 SendEmail failed"
+
+# SES v1 SendEmail with CC/BCC
+RESP=$(curl -s -X POST "$BASE_URL/" -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'Action=SendEmail&Source=v1@test.com&Destination.ToAddresses.member.1=a@test.com&Destination.ToAddresses.member.2=b@test.com&Destination.CcAddresses.member.1=cc@test.com&Destination.BccAddresses.member.1=bcc@test.com&Message.Subject.Data=V1+Full&Message.Body.Html.Data=%3Ch1%3EFull%3C%2Fh1%3E&Message.Body.Text.Data=plain')
+echo "$RESP" | grep -q "MessageId" && pass "SES v1 SendEmail with CC/BCC works" || fail "SES v1 full email failed"
+
+# SES v1 validation - missing Source
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/" -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'Action=SendEmail&Destination.ToAddresses.member.1=user@test.com&Message.Subject.Data=Test')
+echo "$RESP" | grep -q "400" && pass "SES v1 missing Source returns 400" || fail "SES v1 validation failed"
+
+# Verify SES v1 emails have correct provider
+EMAILS=$(curl -s "$BASE_URL/api/emails")
+echo "$EMAILS" | grep -q '"provider":"ses"' && pass "SES v1 emails have provider:ses" || fail "SES v1 emails missing provider field"
+
 # Summary
 echo ""
 echo "=== Summary ==="

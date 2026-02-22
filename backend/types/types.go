@@ -5,6 +5,7 @@ import "time"
 // Email represents a stored email
 type Email struct {
 	ID          string            `json:"id"`
+	Provider    string            `json:"provider"`
 	From        string            `json:"from"`
 	To          []string          `json:"to"`
 	CC          []string          `json:"cc,omitempty"`

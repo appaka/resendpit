@@ -32,14 +32,25 @@ func main() {
 	mux.HandleFunc("/api/events", handlers.Events)
 	mux.HandleFunc("/api/health", handlers.Health)
 
+	// SES v2 route
+	mux.HandleFunc("/v2/email/outbound-emails", handlers.PostSESv2Email)
+
 	// Serve embedded static files
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// SPA handler: serve static files or fallback to index.html
-	mux.Handle("/", spaHandler(http.FS(staticFS)))
+	// SPA handler with SES v1 detection: form-encoded POST to / is SES v1
+	spa := spaHandler(http.FS(staticFS))
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/" &&
+			strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+			handlers.PostSESv1Email(w, r)
+			return
+		}
+		spa.ServeHTTP(w, r)
+	}))
 
 	port := os.Getenv("PORT")
 	if port == "" {
